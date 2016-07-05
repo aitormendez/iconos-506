@@ -1,0 +1,70 @@
+gulp = require('gulp'),
+async = require('async'),
+rename = require("gulp-rename"),
+iconfont = require('gulp-iconfont'),
+sketch = require('gulp-sketch'),
+runTimestamp = Math.round(Date.now()/1000),
+consolidate = require("gulp-consolidate");
+
+gulp.task('sketch', function(){
+return gulp.src('assets/sketch/*.sketch')
+  .pipe(sketch({
+    export: 'artboards',
+    formats: 'svg'
+  }))
+  .pipe(gulp.dest('assets/icons/'));
+});
+
+
+
+
+gulp.task('iconfont', ['sketch'],function(done){
+  var iconStream = gulp.src(['assets/icons/*.svg'])
+    .pipe(iconfont({ fontName: 'myfont' }));
+
+  async.parallel([
+    function handleGlyphs (cb) {
+      iconStream.on('glyphs', function(glyphs, options) {
+        gulp.src('assets/templates/iac.css')
+          .pipe(consolidate('lodash', {
+            glyphs: glyphs,
+            fontName: 'iac',
+            fontPath: 'dist/fonts/',
+            className: 's'
+          }))
+          .pipe(gulp.dest('dist/css/'))
+          .on('finish', cb);
+      });
+    },
+    function handleFonts (cb) {
+      iconStream
+        .pipe(gulp.dest('www/fonts/'))
+        .on('finish', cb);
+    }
+  ], done);
+});
+
+
+
+
+gulp.task('iconfontoooo', ['sketch'], function(){
+  return gulp.src(['assets/icons/*.svg'])
+    .pipe(iconfont({
+      fontName: 'iac', // required
+      prependUnicode: true, // recommended option
+      formats: ['ttf', 'eot', 'woff', 'svg'], // default, 'woff2' and 'svg' are available
+      timestamp: runTimestamp, // recommended to get consistent builds when watching files
+    }))
+      .on('glyphs', function(glyphs, options) {
+        // CSS templating, e.g.
+        console.log(glyphs, options);
+      })
+    .pipe(gulp.dest('dist/fonts/'));
+});
+
+
+
+
+
+
+gulp.task('default', ['iconfont']);
